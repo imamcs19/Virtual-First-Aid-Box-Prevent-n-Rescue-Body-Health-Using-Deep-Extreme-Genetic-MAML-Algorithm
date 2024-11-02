@@ -24,7 +24,7 @@ def run_experiments(test_functions, optimization_algorithms, bounds_test_functio
             
             # final_path_last_Model = f'model_reg_last/model_last_{run}_{final_lossval:.3f}_{filename_last_Model}'
             
-            save_last_model_reptile_checkpoint(final_model, final_path_last_Model+'_'+optimizer.__name__+'.json')
+            save_last_model_reptile_checkpoint(final_model, final_path_last_Model+'_'+func.__name__+'_'+optimizer.__name__+'.json')
             # save_last_info_params(final_config["n_iterations"], final_config["n_data_all"], final_config["n_sample"], \
             #                       final_config["n_train"], final_config["seed"], final_config["inner_step_size"], \
             #                       final_config["inner_epochs"], final_config["outer_stepsize_reptile"], \
@@ -35,8 +35,8 @@ def run_experiments(test_functions, optimization_algorithms, bounds_test_functio
                 final_config["n_train"], final_config["seed"], final_config["inner_step_size"],
                 final_config["inner_epochs"], final_config["outer_stepsize_reptile"],
                 final_config["outer_stepsize_maml"], final_config["run"], final_config["final_lossval"],
-                final_config["filename_last_Model"]+'_'+optimizer.__name__,
-                final_config["path_filename_last_Model"]+'_'+optimizer.__name__+'.json'
+                final_config["filename_last_Model"]+'_'+func.__name__+'_'+optimizer.__name__,
+                final_config["path_filename_last_Model"]+'_'+func.__name__+'_'+optimizer.__name__+'.json'
             )
             
             print(final_config)
@@ -252,6 +252,91 @@ def save_chart_to_pdf(results,path_to_save=None):
     pdf_pages.close()
     
 # Analisis statistik p-values antar algoritma
+# def statistical_analysis_with_visualization(results, suffix, folder_name):
+#     for i in range(len(results)):
+#         function_name = results[i]['function']
+#         algorithm_results = results[i]['results']
+        
+#         # Create a dictionary to hold fitness values
+#         fitness_data = {}
+        
+#         # Collect max_gbest_each_iter for each algorithm
+#         for algorithm in algorithm_results:
+#             algorithm_name = algorithm['algorithm_name']
+#             fitness_data[algorithm_name] = algorithm['max_gbest_each_iter']  # or use mean_gbest_each_iter
+
+#         # Perform pairwise statistical analysis between algorithms
+#         algorithm_names = list(fitness_data.keys())
+#         for j in range(len(algorithm_names)):
+#             for k in range(j + 1, len(algorithm_names)):
+#                 algorithm1 = algorithm_names[j]
+#                 algorithm2 = algorithm_names[k]
+                
+#                 fitness_values1 = fitness_data[algorithm1]
+#                 fitness_values2 = fitness_data[algorithm2]
+
+#                 # Check for enough data points and variability
+#                 if len(fitness_values1) < 2 or len(fitness_values2) < 2:
+#                     print(f"Not enough data to perform t-test for {function_name} using {algorithm1} and {algorithm2}.")
+#                     continue
+                
+#                 std1, std2 = np.std(fitness_values1, ddof=1), np.std(fitness_values2, ddof=1)
+
+#                 if std1 == 0 or std2 == 0:
+#                     print(f"Insufficient variability in fitness values for {function_name} using {algorithm1} and {algorithm2}. Skipping t-test.")
+#                     continue
+
+#                 # Perform t-test
+#                 t_stat, p_value = ttest_ind(fitness_values1, fitness_values2)
+#                 print(f"\nStatistical Analysis for {function_name} using {algorithm1} and {algorithm2}:")
+#                 print(f"P-value: {p_value}")
+
+#                 # Define null hypothesis
+#                 H0 = "There is no significant difference in the fitness values of the two algorithms."
+#                 H1 = "There is a significant difference in the fitness values of the two algorithms."
+                
+#                 if p_value < 0.05:  # 95% confidence level
+#                     print("Reject H0:", H1)
+#                 else:
+#                     print("Fail to reject H0:", H0)
+
+#                 # Calculate means and standard deviations
+#                 mean1, mean2 = np.mean(fitness_values1), np.mean(fitness_values2)
+#                 std1, std2 = np.std(fitness_values1, ddof=1), np.std(fitness_values2, ddof=1)
+                
+#                 # Calculate confidence interval
+#                 conf_interval = 1.96 * np.sqrt((std1**2 / len(fitness_values1)) + (std2**2 / len(fitness_values2)))
+#                 mean_diff = mean1 - mean2
+#                 ci_lower = mean_diff - conf_interval
+#                 ci_upper = mean_diff + conf_interval
+
+#                 print(f"95% Confidence Interval for the difference in means: ({ci_lower:.4f}, {ci_upper:.4f})")
+
+#                 # Visualization
+#                 x = np.linspace(-1, 1, 1000)
+#                 y1 = norm.pdf(x, mean1, std1)
+#                 y2 = norm.pdf(x, mean2, std2)
+
+#                 plt.figure(figsize=(10, 6))
+#                 plt.plot(x, y1, label=f'{algorithm1} (Mean: {mean1:.4f})', color='blue')
+#                 plt.plot(x, y2, label=f'{algorithm2} (Mean: {mean2:.4f})', color='red')
+
+#                 # Shade the confidence interval
+#                 plt.fill_betweenx(y1, ci_lower, ci_upper, where=(x >= ci_lower) & (x <= ci_upper), color='lightblue', alpha=0.5, label='95% Confidence Interval')
+                
+#                 plt.title(f'Distribution of Fitness Values for {function_name}\n{algorithm1} vs {algorithm2}')
+#                 plt.xlabel('Fitness Value')
+#                 plt.ylabel('Probability Density')
+#                 plt.legend()
+#                 plt.grid()
+                
+#                  # Save the plot as PDF and PNG
+#                 plt.savefig(f"{folder_name}/{function_name}_{algorithm1}_{algorithm2}_{suffix}.pdf")
+#                 plt.savefig(f"{folder_name}/{function_name}_{algorithm1}_{algorithm2}_{suffix}.png")
+                
+#                 plt.show()
+#     plt.close()
+
 def statistical_analysis_with_visualization(results, suffix, folder_name):
     for i in range(len(results)):
         function_name = results[i]['function']
@@ -261,9 +346,11 @@ def statistical_analysis_with_visualization(results, suffix, folder_name):
         fitness_data = {}
         
         # Collect max_gbest_each_iter for each algorithm
+        noise=1e-8 # small noise add to a force t-test
         for algorithm in algorithm_results:
             algorithm_name = algorithm['algorithm_name']
-            fitness_data[algorithm_name] = algorithm['max_gbest_each_iter']  # or use mean_gbest_each_iter
+            # fitness_data[algorithm_name] = algorithm['max_gbest_each_iter']  # or use mean_gbest_each_iter
+            fitness_data[algorithm_name] = algorithm['max_gbest_each_iter'] + noise * np.random.randn(len(algorithm['max_gbest_each_iter']))
 
         # Perform pairwise statistical analysis between algorithms
         algorithm_names = list(fitness_data.keys())
@@ -281,13 +368,13 @@ def statistical_analysis_with_visualization(results, suffix, folder_name):
                     continue
                 
                 std1, std2 = np.std(fitness_values1, ddof=1), np.std(fitness_values2, ddof=1)
-
-                if std1 == 0 or std2 == 0:
+                # Check for low variability (close to identical values)
+                if np.abs(np.mean(fitness_values1) - np.mean(fitness_values2)) < 1e-6 or std1 == 0 or std2 == 0:
                     print(f"Insufficient variability in fitness values for {function_name} using {algorithm1} and {algorithm2}. Skipping t-test.")
                     continue
 
                 # Perform t-test
-                t_stat, p_value = ttest_ind(fitness_values1, fitness_values2)
+                t_stat, p_value = ttest_ind(fitness_values1, fitness_values2, equal_var=False)
                 print(f"\nStatistical Analysis for {function_name} using {algorithm1} and {algorithm2}:")
                 print(f"P-value: {p_value}")
 
@@ -302,7 +389,6 @@ def statistical_analysis_with_visualization(results, suffix, folder_name):
 
                 # Calculate means and standard deviations
                 mean1, mean2 = np.mean(fitness_values1), np.mean(fitness_values2)
-                std1, std2 = np.std(fitness_values1, ddof=1), np.std(fitness_values2, ddof=1)
                 
                 # Calculate confidence interval
                 conf_interval = 1.96 * np.sqrt((std1**2 / len(fitness_values1)) + (std2**2 / len(fitness_values2)))
@@ -313,7 +399,7 @@ def statistical_analysis_with_visualization(results, suffix, folder_name):
                 print(f"95% Confidence Interval for the difference in means: ({ci_lower:.4f}, {ci_upper:.4f})")
 
                 # Visualization
-                x = np.linspace(-1, 1, 1000)
+                x = np.linspace(min(mean1, mean2) - 3*max(std1, std2), max(mean1, mean2) + 3*max(std1, std2), 1000)
                 y1 = norm.pdf(x, mean1, std1)
                 y2 = norm.pdf(x, mean2, std2)
 
@@ -335,7 +421,7 @@ def statistical_analysis_with_visualization(results, suffix, folder_name):
                 plt.savefig(f"{folder_name}/{function_name}_{algorithm1}_{algorithm2}_{suffix}.png")
                 
                 plt.show()
-                plt.close()
+    plt.close()
 
 # Menyimpan hasil ke file
 def save_results(results, folder_name):
